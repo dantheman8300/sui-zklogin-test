@@ -4,6 +4,7 @@ import { SuiClient, getFullnodeUrl } from '@mysten/sui.js/client';
 import { SerializedSignature } from '@mysten/sui.js/cryptography';
 import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
+import { getFaucetHost, requestSuiFromFaucetV0 } from '@mysten/sui.js/faucet';
 import {
     genAddressSeed,
     generateNonce,
@@ -132,10 +133,21 @@ export default function Home() {
       return;
     }
 
-    const userSalt = BigInt(8300);
+    const userInput = prompt('Enter your password:');
+    if (!userInput) {
+        console.warn('[completeZkLogin] missing user input');
+        return;
+    }
+    const userSalt = BigInt(hash(userInput));
     const userAddr = jwtToAddress(jwt, userSalt);
 
+    // await requestSuiFromFaucetV0({
+    //   host: getFaucetHost(NETWORK),
+    //   recipient: userAddr,
+    // });
+
     console.log(`🔑 Logged in as ${userAddr}`);
+    
 
     // Load and clear data from local storage which beginZkLogin() created before the redirect
     const setupData = loadSetupData();
@@ -262,7 +274,7 @@ export default function Home() {
               owner: account.userAddr,
               coinType: '0x2::sui::SUI',
           });
-          newBalances[account.userAddr] = suiBalance.totalBalance;
+          newBalances[account.userAddr] = parseInt(suiBalance.totalBalance)/1e9 + '';
       }
       setBalances(newBalances);
   }
@@ -344,4 +356,16 @@ export default function Home() {
 
 function shortenAddress(address: string): string {
   return '0x' + address.slice(2, 8) + '...' + address.slice(-6);
+}
+
+function hash(input: string) {
+  var hash = 0,
+    i, chr;
+  if (input.length === 0) return hash;
+  for (i = 0; i < input.length; i++) {
+    chr = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
 }
